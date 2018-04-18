@@ -5,13 +5,20 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class Player : MovingObject          //Player inherits from MovingObject, our base class for objects that can move, Enemy also inherits from this.
-{                
+{
 
     public int wallDamage = 1;          //How much damage a player does to a wall when chopping it.
     public int pointsPerFood = 10;          //Number of points to add to player food points when picking up a food object.
     public int pointsPerSoda = 20;          //Number of points to add to player food points when picking up a soda object.
     public float restartLevelDelay = 1f;            //Delay time in seconds to restart level.
     public Text foodText;
+    public AudioClip moveSound1;
+    public AudioClip moveSound2;
+    public AudioClip eatSound1;
+    public AudioClip eatSound2;
+    public AudioClip drinkSound1;
+    public AudioClip drinkSound2;
+    public AudioClip gameOverSound;
 
     private Animator animator;         //Used to store a reference to the Player's animator component.
     private int food;            //Used to store player food points total during level.
@@ -25,9 +32,9 @@ public class Player : MovingObject          //Player inherits from MovingObject,
         foodText.text = "Food " + food;
 
         base.Start();
-	}
+    }
 
-    private void OnDisable()
+    private void OnDisable ()
     {
         GameManager.instance.playerFoodPoints = food;
     }
@@ -35,7 +42,7 @@ public class Player : MovingObject          //Player inherits from MovingObject,
     // Update is called once per frame
     private void Update ()
     {
-        if (!GameManager.instance.playersTurn) return;
+        if ( !GameManager.instance.playersTurn ) return;
 
         int horizontal = 0;
         int vertical = 0;
@@ -43,25 +50,25 @@ public class Player : MovingObject          //Player inherits from MovingObject,
         horizontal = (int)Input.GetAxisRaw("Horizontal");
         vertical = (int)Input.GetAxisRaw("Vertical");
 
-        if (horizontal != 0)
+        if ( horizontal != 0 )
             vertical = 0;
 
-        if (horizontal != 0 || vertical != 0)
-            AttemptMove <Wall> (horizontal, vertical);
-	}
+        if ( horizontal != 0 || vertical != 0 )
+            AttemptMove<Wall>(horizontal, vertical);
+    }
 
-    protected override void AttemptMove <T> (int xDir, int yDir)
+    protected override void AttemptMove<T> ( int xDir, int yDir )
     {
         food--;
         foodText.text = "Food " + food;
 
-        base.AttemptMove <T> (xDir, yDir);
+        base.AttemptMove<T>(xDir, yDir);
 
         RaycastHit2D hit;
 
-        if (Move(xDir, yDir, out hit))
+        if ( Move(xDir, yDir, out hit) )
         {
-            //Call RandomizeSfx of SoundManager to play the move sound, passing in two audio clips to choose from.
+            SoundManager.instance.RandomizeSfx(moveSound1, moveSound2);
         }
 
         CheckIfGameOver();
@@ -69,40 +76,42 @@ public class Player : MovingObject          //Player inherits from MovingObject,
         GameManager.instance.playersTurn = false;
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
+    private void OnTriggerEnter2D ( Collider2D other )
     {
-        if (other.tag == "Exit")
+        if ( other.tag == "Exit" )
         {
             Invoke("Restart", restartLevelDelay);
             enabled = false;
         }
-        else if (other.tag == "Food")
+        else if ( other.tag == "Food" )
         {
             food += pointsPerFood;
             foodText.text = "+" + pointsPerFood + " Food: " + food;
+            SoundManager.instance.RandomizeSfx(eatSound1, eatSound2);
             other.gameObject.SetActive(false);
         }
-        else if (other.tag == "Soda")
+        else if ( other.tag == "Soda" )
         {
             food += pointsPerSoda;
             foodText.text = "+" + pointsPerSoda + " Food: " + food;
+            SoundManager.instance.RandomizeSfx(drinkSound1, drinkSound2);
             other.gameObject.SetActive(false);
         }
     }
 
-    protected override void OnCantMove <T> (T component)
+    protected override void OnCantMove<T> ( T component )
     {
         Wall hitWall = component as Wall;
         hitWall.DamageWall(wallDamage);
         animator.SetTrigger("PlayerChop");
     }
 
-    private void Restart()
+    private void Restart ()
     {
         SceneManager.LoadScene(0);
     }
 
-    public void LoseFood(int loss)
+    public void LoseFood ( int loss )
     {
         animator.SetTrigger("PlayerHit");
         food -= loss;
@@ -110,10 +119,12 @@ public class Player : MovingObject          //Player inherits from MovingObject,
         CheckIfGameOver();
     }
 
-    private void CheckIfGameOver()
+    private void CheckIfGameOver ()
     {
-        if (food <= 0)
+        if ( food <= 0 )
         {
+            SoundManager.instance.PlaySingle(gameOverSound);
+            SoundManager.instance.musicSource.Stop();
             GameManager.instance.GameOver();
         }
     }
